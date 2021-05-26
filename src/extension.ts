@@ -7,12 +7,13 @@ export function activate(context: vscode.ExtensionContext) {
     try {
         const serverOptions = {
             /**
+             * MEMO:
              * oreore.js が今回作成する言語処理系なのですが、第一引数が --language-server になっているときは 
              * Language Server として動作するようにしたい、という算段です。
              */
             command: "node",
             args: [
-                context.extensionPath + "/oreore.js",
+                context.extensionPath + "/dist/orere.js",
                 "--language-server"
             ]
         };

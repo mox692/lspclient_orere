@@ -1,27 +1,36 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
+"use strict";
 import * as vscode from 'vscode';
+import { LanguageClient } from 'vscode-languageclient/node';
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
+let languageClient:LanguageClient
 export function activate(context: vscode.ExtensionContext) {
-
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "lspclient-orere" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('lspclient-orere.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from lspclient_orere!');
-	});
-
-	context.subscriptions.push(disposable);
+    try {
+        const serverOptions = {
+            /**
+             * oreore.js が今回作成する言語処理系なのですが、第一引数が --language-server になっているときは 
+             * Language Server として動作するようにしたい、という算段です。
+             */
+            command: "node",
+            args: [
+                context.extensionPath + "/oreore.js",
+                "--language-server"
+            ]
+        };
+        const clientOptions = {
+            documentSelector: [
+                {
+                    scheme: "file",
+                    language: "oreore",
+                }
+            ],
+        };
+        languageClient = new LanguageClient("lspclient-orere", serverOptions, clientOptions);
+        context.subscriptions.push(languageClient.start());
+    } catch (e) {
+        vscode.window.showErrorMessage("lspclient-orere couldn't be started.");
+    }
 }
 
-// this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+    if (languageClient) return languageClient.stop();
+}

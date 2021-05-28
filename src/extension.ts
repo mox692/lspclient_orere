@@ -13,7 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
              */
             command: "node",
             args: [
-                context.extensionPath + "/dist/orere.js",
+                context.extensionPath + "/dist/server.js",
                 "--language-server"
             ]
         };

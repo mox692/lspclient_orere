@@ -1,14 +1,30 @@
 import * as fs from "fs";
 import { logger } from "./server"
 import * as encoding from 'text-encoding';
+import { Diagnostic } from "vscode";
+
+const diagnostics = [
+    {
+        range:
+        {
+            start: { line: 0, character: 0 },
+            end: { line: 0, character: 5 }
+        },
+        message: "diagnostic message 1",
+    },
+]
 
 const requestTable:any = {}
+let publishDiagnosticsCapable = false;
+
 requestTable["initialize"] = (msg:any) => {
-    const capabilities = {
-        textDocumentSync: {
-            openClose: true,
-            change: 1,
+    if (msg.params && msg.params.capabilities) {
+        if (msg.params.capabilities.textDocument && msg.params.capabilities.textDocument.publishDiagnostics) {
+            publishDiagnosticsCapable = true;
         }
+    }
+    const capabilities = {
+        textDocumentSync: 1
     }
     sendMessage({ jsonrpc: "2.0", id: msg.id, result: { capabilities } });
 }
@@ -27,11 +43,23 @@ notificationTable["textDocument/didChange"] = (msg:any) => {
         const uri = msg.params.textDocument.uri
         const text = msg.params.textDocument.text
         compile(uri, text)
+        sendPublishDiagnostics(uri, diagnostics)
     }
+}
+
+notificationTable["textDocument/didSave"] = (msg:any) => {
+    logger("saved!!")
 }
 
 const compile = (uri:string, src:string) => {
     logMessage(`Got access!! uri: ${uri}, src: ${src}`)
+}
+function sendPublishDiagnostics(uri:string, diagnostics:any) {
+    logger("send1!!!!!!!")
+    if (publishDiagnosticsCapable) {
+        logger("send2!!!!!!!")
+        sendMessage({ jsonrpc: "2.0", method: "textDocument/publishDiagnostics", params: { uri, diagnostics } });
+    }
 }
 
 /**

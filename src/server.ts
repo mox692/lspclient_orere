@@ -2,7 +2,6 @@ import { dispatch, sendParseErrorResponse } from './message'
 const fs = require("fs");
 const log = fs.openSync("/Users/kimuramotoyuki/lspclient-orere/logfile", "w"); // ファイル名は適宜変えてください
 
-
 const languageServer = () => {
     let buffer = Buffer.from(new Uint8Array(0));
     
@@ -55,6 +54,12 @@ const languageServer = () => {
             buffer = buffer.slice(headerLength + contentLength);
         }
     });
+}
+
+export const logger = (logMsg:string) => {
+    fs.writeSync(log, "\n***********************\n")
+    fs.writeSync(log, logMsg)
+    fs.writeSync(log, "\n***********************\n")
 }
 
 /**

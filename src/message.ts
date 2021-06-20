@@ -1,8 +1,10 @@
 import * as fs from "fs";
 import { logger } from "./server"
 import * as encoding from 'text-encoding';
-import { Diagnostic } from "vscode";
 
+type TokenKind = "(" | ")" | ";" | "comment" | "number" | "variable"
+
+const buffers:any = {};
 const diagnostics = [
     {
         range:
@@ -34,6 +36,7 @@ notificationTable["initialized"] = (msg:any) => {
     logMessage("initialized!");
 }
 notificationTable["textDocument/didOpen"] = (msg:any) => {
+    logger("called didOpne")
     const uri = msg.params.textDocument.uri
     const text = msg.params.textDocument.text
     compile(uri, text)
@@ -41,7 +44,7 @@ notificationTable["textDocument/didOpen"] = (msg:any) => {
 notificationTable["textDocument/didChange"] = (msg:any) => {
     if(msg.params.contentChanges.length !== 0) {
         const uri = msg.params.textDocument.uri
-        const text = msg.params.textDocument.text
+        const text = msg.params.contentChanges[0].text // TODO: 複数入る時の調査
         compile(uri, text)
         sendPublishDiagnostics(uri, diagnostics)
     }
@@ -52,12 +55,85 @@ notificationTable["textDocument/didSave"] = (msg:any) => {
 }
 
 const compile = (uri:string, src:string) => {
-    logMessage(`Got access!! uri: ${uri}, src: ${src}`)
+    logger(`Got access!! uri: ${uri}, src: ${src}`)
+    const tokens = tokenize(uri, src);
+    logger("tokens")
+    logger(tokens)
+    buffers[uri] = { tokens };
 }
+
+const tokenize = (uri:string, str:string) => {
+    let i = 0; // strの総カウンタ
+    let line = 0; // 改行カウンタ
+    let character = 0; // 左からなんもじめカウンタ
+    let tokens:any = []; // 解析されたtokenたち
+
+    const nextChar = () => {
+        if (str.length === i) return;
+        if (str[i] === "\n") {
+            ++i;
+            ++line;
+            character = 0;
+        } else {
+            ++i;
+            ++character;
+        }
+    }
+
+    while (true) {
+        // skip leading whitespaces
+        while (true) {
+            if (str.length === i) return tokens;
+            // MEMO: これ"\t or \r or \n"みたいなOR条件になってるの？
+            if (" \t\r\n".indexOf(str[i]) === -1) break;
+            nextChar();
+        }
+
+        const start = { line, character };
+
+        let text;
+        let kind:TokenKind;
+        if (str[i] === "(") {
+            text = "(";
+            kind = "(";
+            nextChar();
+        } else if (str[i] === ")") {
+            text = ")";
+            kind = ")";
+            nextChar();
+        } else if (str[i] === ";") {
+            const begin = i;
+            while (true) {
+                if (str.length === i) break;
+                if (str[i] === "\n") break;
+                nextChar();
+            }
+            text = str.substring(begin, i);
+            kind = "comment";
+        } else {
+            const begin = i;
+            while (true) {
+                if (str.length === i) break;
+                if (" \t\r\n();".indexOf(str[i]) !== -1) break;
+                nextChar();
+            }
+            text = str.substring(begin, i);
+
+            if (!isNaN(Number(text))) {
+                kind = "number";
+            } else {
+                kind = "variable";
+            }
+        }
+
+        const end = { line, character };
+        const location = { uri, range: { start, end } };
+        tokens.push({ kind, text, location });
+    }
+}
+
 function sendPublishDiagnostics(uri:string, diagnostics:any) {
-    logger("send1!!!!!!!")
     if (publishDiagnosticsCapable) {
-        logger("send2!!!!!!!")
         sendMessage({ jsonrpc: "2.0", method: "textDocument/publishDiagnostics", params: { uri, diagnostics } });
     }
 }

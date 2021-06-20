@@ -58,7 +58,7 @@ const languageServer = () => {
 
 export const logger = (logMsg:string) => {
     fs.writeSync(log, "\n***********************\n")
-    fs.writeSync(log, logMsg)
+    fs.writeSync(log, JSON.stringify(logMsg))
     fs.writeSync(log, "\n***********************\n")
 }
 
